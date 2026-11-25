@@ -16,7 +16,7 @@ bakom det sitter en lokal motor (`engine.js`) i stället för HA.
 - Påminnelse efter valfritt antal timmar (visas när appen är öppen)
 - Fungerar utan nät när den väl är installerad
 - Backup till fil, och inläsning av backup. Tid från Home Assistant kan flyttas in.
-- Valfri synk mellan enheter via ditt eget Google-ark, med mejlade rapporter (se `google-synk/README.md`)
+- Valfri synk mellan enheter via ditt eget Google-ark (koppla med en länk, ingen kod att redigera), med mejlade rapporter (se `google-synk/README.md`)
 
 ## Lägga ut den (ett tillfälle)
 

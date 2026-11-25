@@ -8,20 +8,22 @@ Det här är ett litet skript som körs i **ditt** Google-konto. Ingen annan har
 
 ## Sätt upp (ca 5 minuter, görs en gång, helst på dator)
 
-1. Gå till [sheets.new](https://sheets.new) och skapa ett nytt ark. Döp det till t.ex. *Arbetstid*.
-2. Meny **Tillägg → Apps Script**. Radera allt som står där.
-3. Öppna `Code.gs` i den här mappen, kopiera allt och klistra in.
-4. Byt `BYT-MIG` på raden `const NYCKEL` till en lång, hemlig text (t.ex. 20 slumpade tecken). Spara nyckeln, du ska skriva in samma i appen.
-5. Tryck **Distribuera → Ny distribution**. Kugghjulet → **Webbapp**.
+1. Öppna mallen du fått länk till och tryck **Gör en kopia**. Kopian hamnar i ditt Google-konto och har skriptet inbyggt.
+   (Har du ingen mall: skapa ett nytt ark på [sheets.new](https://sheets.new), välj **Tillägg → Apps Script**, klistra in innehållet i `Code.gs` och spara.)
+2. Meny **Tillägg → Apps Script**. Tryck **Distribuera → Ny distribution**, kugghjulet → **Webbapp**.
    - *Kör som:* **Jag**
    - *Vem har åtkomst:* **Alla**
-   (Adressen går inte att gissa, och utan nyckeln händer ingenting. Därför behövs det.)
-6. Tryck **Distribuera** och godkänn behörigheterna. Google varnar för att appen
+   (Adressen går inte att gissa, och utan nyckeln händer ingenting.)
+3. Tryck **Distribuera** och godkänn behörigheterna. Google varnar för att appen
    "inte är verifierad": välj *Avancerat → Gå till … (osäkert)*. Det är ditt eget skript.
-7. Kopiera **webbappens URL** (slutar på `/exec`).
-8. I appen: kugghjulet → **Synk (valfritt)** → klistra in URL och nyckel → **Spara och synka**.
+4. Ladda om arket. Det kommer en ny meny, **Arbetstid → Koppla telefon**. Välj den, tryck **Mejla länken till mig** och öppna mejlet på telefonen.
+5. Tryck på länken. Appen frågar om den ska kopplas till ditt ark. Svara ja. Klart.
 
-På nästa enhet: installera appen, gör bara steg 8 med samma URL och nyckel. Då hämtas allt.
+Nyckeln skapas automatiskt av skriptet, du behöver aldrig skriva eller se den.
+På nästa enhet: gör steg 4–5 igen (mejla länken, öppna på den enheten).
+
+Går länken inte att använda kan du i stället klistra in adressen (webbappens URL, slutar på `/exec`) och nyckeln
+(Apps Script → Projektinställningar → Skriptegenskaper → `NYCKEL`) under kugghjulet → *Synk (valfritt)*.
 
 ## Mejla rapporter
 
@@ -37,10 +39,18 @@ används telefonens vanliga delningsmeny.
 - Alla enheter slår ihop sina händelser utan konflikter. Går en enhet offline synkas det vid nästa start eller var femte minut.
 - Inställningar (norm, arbetsdagar m.m.) är per enhet och synkas inte. Nyckeln ligger bara på enheten och ingår inte i backupfilen.
 - *Radera all data* i appen tömmer bara enheten. Är synken på hämtas allt tillbaka från arket. Vill du börja om: koppla från synken och töm arket.
-- Skulle du misstänka att nyckeln läckt: byt `NYCKEL` i skriptet, gör en ny version och skriv in den nya i appen.
+- Skulle du misstänka att nyckeln läckt: ta bort `NYCKEL` under Skriptegenskaper (en ny skapas direkt), och koppla om enheterna med *Koppla telefon*.
+- Länken från *Koppla telefon* innehåller nyckeln. Skicka den bara till dig själv.
 
 ## Vad som är testat
 
 Skriptets logik och appens synk är testade mot en låtsas-Google och två webbläsare.
-Själva Googles beteende (godkännandeskärmar, omdirigeringar) går inte att testa utan ett riktigt konto,
+Själva Googles beteende (godkännandeskärmar, omdirigeringar, menyn och att adressen hämtas rätt) går inte att testa utan ett riktigt konto,
 så första uppsättningen bör du prova med två enheter.
+
+## För den som delar ut appen: skapa mallen (en gång)
+
+1. Skapa ett tomt Google-ark, **Tillägg → Apps Script**, klistra in `Code.gs` och spara. Kontrollera att `APP_URL` överst är appens adress.
+2. Dela arket: *Dela → Alla med länken → Läsare*. Ändra slutet på arkets webbadress från `/edit…` till `/copy`.
+   Den adressen är mallens länk: den som öppnar den får en egen kopia, med skriptet.
+3. Distribuera **inte** mallen själv, varje användare gör sin egen distribution i sin kopia.

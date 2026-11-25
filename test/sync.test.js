@@ -113,9 +113,57 @@ test("fel nyckel: felmeddelande och ingen data läcker", async () => {
   assert.deepEqual(server.post("inte json"), { ok: false, error: "bad" });
 });
 
-test("nyckeln BYT-MIG accepteras aldrig av skriptet", () => {
-  const raw = require("fs").readFileSync(require("path").join(__dirname, "..", "google-synk", "Code.gs"), "utf8");
-  assert.match(raw, /NYCKEL === 'BYT-MIG'/);
+test("nyckeln slumpas automatiskt, är lång och ändras inte", () => {
+  const server = createScript();
+  const k1 = server.key;
+  assert.match(k1, /^[0-9a-f]{64}$/);
+  server.post({ key: "fel", cursor: 1 });
+  assert.equal(server.key, k1);
+  assert.deepEqual(server.post({ key: "", cursor: 1 }), { ok: false, error: "auth" });
+  assert.deepEqual(server.post({ cursor: 1 }), { ok: false, error: "auth" });
+  assert.deepEqual(server.post({ key: 123, cursor: 1 }), { ok: false, error: "auth" });
+  assert.equal(server.post({ key: k1, cursor: 1 }).ok, true);
+});
+
+test("Koppla telefon: länken innehåller adress och nyckel och fungerar i appen", () => {
+  const server = createScript();
+  server.api.onOpen();
+  assert.equal(server.ui.menu, "Arbetstid");
+  server.api.kopplaTelefon();
+  const html = server.ui.dialogs[0].html;
+  const link = html.match(/readonly[^>]*>([^<]+)</)[1];
+  assert.ok(link.startsWith("https://dakul05.github.io/arbetstid/#synk="));
+  const o = S.parseLink(link.split("#")[1]);
+  assert.equal(o.url, "https://script.google.com/macros/s/AKtest/exec", "/dev blir /exec");
+  assert.equal(o.key, server.key);
+  const a = phone(server, "2026-11-25T08:00");
+  a.sync.configure(o.url.replace("https://script.google.com", "https://script.google.com"), o.key);
+  assert.equal(a.sync.configured, true);
+});
+
+test("Koppla telefon utan distribution ger tydligt besked, ingen länk", () => {
+  const server = createScript();
+  server.state.deployed = false;
+  server.api.kopplaTelefon();
+  assert.equal(server.ui.dialogs.length, 0);
+  assert.match(server.ui.alerts[0][1], /Distribuera/);
+});
+
+test("Mejla länken går alltid till ägaren, även med MOTTAGARE satt", () => {
+  const server = createScript({ owner: "agare@example.com", mottagare: "ann@example.com" });
+  server.api.mejlaLank();
+  assert.equal(server.mails[0].to, "agare@example.com");
+  assert.match(server.mails[0].body, /#synk=/);
+});
+
+test("parseLink avvisar skräp och osäkra adresser", () => {
+  const enc = (o) => Buffer.from(JSON.stringify(o)).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  assert.equal(S.parseLink("synk=%%%"), null);
+  assert.equal(S.parseLink("annat=1"), null);
+  assert.equal(S.parseLink("synk=" + enc({ u: "http://evil.example/exec", k: "abc" })), null);
+  assert.equal(S.parseLink("synk=" + enc({ u: "https://script.google.com/macros/s/A/exec" })), null);
+  assert.equal(S.parseLink("synk=" + enc({ u: "https://script.google.com/macros/s/A/exec", k: "abc" })).key, "abc");
+  assert.equal(S.parseLink("synk=" + enc({ u: "https://evil.example/exec", k: "abc" })), null, "bara Googles adresser");
 });
 
 test("configure: ogiltiga adresser och nycklar avvisas", () => {
@@ -124,7 +172,6 @@ test("configure: ogiltiga adresser och nycklar avvisas", () => {
   assert.throws(() => a.sync.configure("inte en adress", "k"), /webbadress/);
   assert.throws(() => a.sync.configure("http://example.com/exec", "k"), /https/);
   assert.throws(() => a.sync.configure("https://script.google.com/macros/s/A/exec", ""), /nyckeln/);
-  assert.throws(() => a.sync.configure("https://script.google.com/macros/s/A/exec", "BYT-MIG"), /BYT-MIG/);
   a.sync.configure("http://localhost:8124/exec", "ok"); // lokalt får vara http (för test)
   assert.equal(a.sync.configured, true);
 });

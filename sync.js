@@ -67,7 +67,6 @@
       const local = u.hostname === "localhost" || u.hostname === "127.0.0.1";
       if (u.protocol !== "https:" && !(local && u.protocol === "http:")) throw new Error("Adressen måste börja med https://");
       if (!key) throw new Error("Skriv in nyckeln");
-      if (key === "BYT-MIG") throw new Error("Nyckeln är fortfarande BYT-MIG. Byt den i skriptet först");
       const changed = u.href !== this.state.url || key !== this.state.key;
       if (changed) this.state = { ...FRESH(), url: u.href, key };
       this.state.mail = !!mail;
@@ -157,5 +156,22 @@
     }
   }
 
-  return { KEY, Sync, SyncError };
+  // Läser "synk=<base64>" ur länken som arket ger ("Koppla telefon"). Returnerar {url,key} eller null.
+  // Bara Googles skriptadresser (och localhost, för test) godtas, så en främmande länk inte kan peka om synken.
+  function parseLink(hash) {
+    try {
+      const m = /(?:^|[#&])synk=([A-Za-z0-9_\-]+)/.exec(String(hash || ""));
+      if (!m) return null;
+      let b = m[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (b.length % 4) b += "=";
+      const bin = typeof atob === "function" ? atob(b) : Buffer.from(b, "base64").toString("binary");
+      const o = JSON.parse(decodeURIComponent(escape(bin)));
+      if (!o || typeof o.u !== "string" || typeof o.k !== "string" || !o.k) return null;
+      const u = new URL(o.u);
+      const ok = (u.protocol === "https:" && u.hostname === "script.google.com") || (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1"));
+      return ok ? { url: o.u, key: o.k } : null;
+    } catch (err) { return null; }
+  }
+
+  return { KEY, Sync, SyncError, parseLink };
 });

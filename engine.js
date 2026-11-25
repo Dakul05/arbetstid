@@ -21,7 +21,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.2.0";
+  const VERSION = "0.2.1";
   const STORAGE_KEY = "arbetstid.v1";
   const EVENT_TYPES = ["start", "stop", "adjust", "import", "leave_add", "leave_del"];
 

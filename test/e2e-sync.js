@@ -58,7 +58,7 @@ const server = http.createServer((req, res) => {
   await A.waitForFunction(() => arbetstid.running === true);
   await A.waitForTimeout(100);
   await A.evaluate(() => arbetstid.adjust(new Date().toLocaleDateString("sv-SE"), 45));
-  await A.waitForTimeout(300); console.log("DBG", await A.evaluate(() => ({run: arbetstid.running, go: document.querySelector(".go")?.textContent, ev: arbetstid.store.events.map(e=>e.type)})));
+  await A.waitForTimeout(300); 
   await A.click(".go"); // stoppa
   await A.waitForFunction(() => arbetstid.running === false);
   await A.waitForFunction(() => arbetstid.store.events.length >= 3);
@@ -90,6 +90,24 @@ const server = http.createServer((req, res) => {
   const before = script.mails.length;
   const sent = await A.evaluate(async () => { try { await arbetstid.hass.callService("script", "arbetstid_maila", {}); return "ok"; } catch (e) { return e.message; } });
   console.log("mail-anrop via kortet:", sent, "mail i mocken:", script.mails.length - before);
+
+  // ny enhet kopplas med länk från arket (confirm accepteras av testet)
+  const hash = Buffer.from(JSON.stringify({ u: URL_, k: "hemlig123" })).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const ctxC = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "sv-SE", timezoneId: "Europe/Stockholm" });
+  const C = await ctxC.newPage();
+  C.on("dialog", (d) => d.accept());
+  await C.goto(APP + "#synk=" + hash);
+  await C.waitForFunction(() => document.getElementById("settings").open, null, { timeout: 10000 }); // norm-dialogen efter kopplingen
+  await C.waitForFunction(() => /Ansluten/.test(document.getElementById("sy-status")?.textContent || ""), null, { timeout: 10000 });
+  const cMin = await C.evaluate(() => Object.values(arbetstid.hass.states["sensor.arbetstid"].attributes.days)[0]);
+  assert(cMin >= aMin, "C fick datan via länken: " + cMin);
+  assert.equal(await C.evaluate(() => location.hash), "", "länken (med nyckeln) ska bort ur adressfältet");
+  // en främmande adress i länken avvisas
+  const bad = Buffer.from(JSON.stringify({ u: "https://evil.example/exec", k: "x" })).toString("base64").replace(/=+$/, "");
+  const D = await (await browser.newContext()).newPage();
+  await D.goto(APP + "#synk=" + bad);
+  await D.waitForTimeout(1500);
+  assert.equal(await D.evaluate(() => JSON.parse(localStorage.getItem("arbetstid.sync") || "{}").url || null), null);
 
   // frånkoppling stoppar synk
   await A.click("#gear"); await A.waitForSelector("#settings[open]");

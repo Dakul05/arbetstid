@@ -2,19 +2,18 @@
  * Arbetstid – synk via Google-ark
  * ------------------------------------------------------------------
  * Det här skriptet körs i DITT Google-konto och sparar loggen i DITT ark.
- * Ingen annan har åtkomst till datan.
+ * Ingen annan har åtkomst till datan. Nyckeln skapas automatiskt och
+ * finns bara i skriptets egna inställningar.
  *
  * Installation: se README.md i den här mappen. Kort version:
- *   1. Skapa ett nytt Google-ark. Tillägg → Apps Script. Klistra in den här filen.
- *   2. Byt NYCKEL nedan till en lång, hemlig text som bara du känner till.
- *   3. Distribuera → Ny distribution → Webbapp. Kör som: Jag. Åtkomst: Alla.
- *   4. Kopiera webbadressen och skriv in den och nyckeln i appen.
+ *   1. Gör en kopia av mallen (eller klistra in den här filen under Tillägg → Apps Script).
+ *   2. Distribuera → Ny distribution → Webbapp. Kör som: Jag. Åtkomst: Alla.
+ *   3. Ladda om arket och välj menyn Arbetstid → Koppla telefon.
  *
  * Händelserna sparas som rader i bladet "Händelser". RADERA INTE RADER där.
- * Du kan titta på dem, men appen räknar ut allt själv.
  */
 
-const NYCKEL = 'BYT-MIG';   // samma text som du skriver in i appen
+const APP_URL = 'https://dakul05.github.io/arbetstid/'; // appens adress
 const MOTTAGARE = '';       // mail från appen går hit. Tomt = ditt eget Google-konto
 const BLAD = 'Händelser';
 const GILTIGA_TYPER = ['start', 'stop', 'adjust', 'import', 'leave_add', 'leave_del'];
@@ -35,7 +34,7 @@ function hantera_(e) {
   } catch (err) {
     return { ok: false, error: 'bad' };
   }
-  if (!NYCKEL || NYCKEL === 'BYT-MIG' || req.key !== NYCKEL) return { ok: false, error: 'auth' };
+  if (typeof req.key !== 'string' || req.key !== nyckel_()) return { ok: false, error: 'auth' };
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return { ok: false, error: 'busy' };
@@ -121,4 +120,59 @@ function skickaMail_(req) {
     htmlBody: String(req.html || '').slice(0, 200000),
   });
   return { ok: true, to: till };
+}
+
+
+// ---- nyckel och koppling av telefon ---------------------------------------
+
+// Slumpas första gången och sparas i skriptets egna inställningar.
+function nyckel_() {
+  const p = PropertiesService.getScriptProperties();
+  let k = p.getProperty('NYCKEL');
+  if (!k) {
+    k = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
+    p.setProperty('NYCKEL', k);
+  }
+  return k;
+}
+
+// Länk som fyller i adress och nyckel i appen. Innehåller nyckeln: dela den inte.
+function lank_() {
+  const url = String(ScriptApp.getService().getUrl() || '').replace(/\/dev$/, '/exec');
+  if (!/\/exec$/.test(url)) throw new Error('Skriptet är inte distribuerat som webbapp ännu');
+  const nyttolast = Utilities.base64EncodeWebSafe(JSON.stringify({ u: url, k: nyckel_() }));
+  return APP_URL + '#synk=' + nyttolast;
+}
+
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('Arbetstid').addItem('Koppla telefon…', 'kopplaTelefon').addToUi();
+}
+
+function kopplaTelefon() {
+  const ui = SpreadsheetApp.getUi();
+  let lank;
+  try {
+    lank = lank_();
+  } catch (err) {
+    ui.alert('Arbetstid', String(err.message) + '.\nGör först: Distribuera → Ny distribution → Webbapp (Kör som: Jag, Åtkomst: Alla).', ui.ButtonSet.OK);
+    return;
+  }
+  const html = HtmlService.createHtmlOutput(
+    '<div style="font:14px sans-serif">' +
+    '<p>Öppna länken på telefonen så kopplas appen till det här arket.</p>' +
+    '<p><button onclick="google.script.run.withSuccessHandler(function(){document.getElementById(\'m\').textContent=\'Skickat till din mejl.\'}).mejlaLank()">Mejla länken till mig</button></p>' +
+    '<p id="m"></p>' +
+    '<p>Eller kopiera:</p><textarea id="l" rows="6" style="width:100%" readonly onclick="this.select()">' + lank.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</textarea>' +
+    '<p style="color:#a00">Länken innehåller din nyckel. Dela den inte med andra.</p></div>'
+  ).setWidth(420).setHeight(380);
+  ui.showModalDialog(html, 'Koppla telefon');
+}
+
+// Alltid till ägaren, aldrig till MOTTAGARE: länken innehåller nyckeln.
+function mejlaLank() {
+  MailApp.sendEmail({
+    to: Session.getEffectiveUser().getEmail(),
+    subject: 'Arbetstid: koppla telefonen',
+    body: 'Öppna länken på telefonen så kopplas appen till ditt ark:\n\n' + lank_() + '\n\nLänken innehåller din nyckel. Dela den inte.',
+  });
 }

@@ -356,8 +356,28 @@
     navigator.serviceWorker.register("sw.js").catch((err) => console.warn("service worker", err));
   }
 
+  // ---- koppling via länk från arket ("Koppla telefon")
+  const linked = ArbetstidSync.parseLink(location.hash);
+  if (/synk=/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+  if (linked) {
+    setTimeout(async () => {
+      const host = new URL(linked.url).host;
+      const yes = confirm(`Koppla appen till ditt Google-ark (${host})? Gör det bara om du själv öppnade länken från ditt ark.`);
+      if (yes) {
+        try {
+          sync.configure(linked.url, linked.key, sync.status.mail);
+          await runSync();
+          toast(sync.status.error ? "Synk: " + sync.status.error : "Kopplad och synkad", 5000);
+        } catch (err) { toast(err.message, 5000); }
+      }
+      if (!eng.store.settings.configured) openSettings(); // ny enhet: ställ in norm och arbetsdagar
+    }, 600);
+  } else if (/synk=/.test(location.hash)) {
+    toast("Länken gick inte att läsa. Hämta en ny i arket.", 5000);
+  }
+
   // ---- första start
-  if (!eng.store.settings.configured) setTimeout(openSettings, 300);
+  if (!eng.store.settings.configured && !linked) setTimeout(openSettings, 300);
   setTimeout(checkReminders, 1500);
 
   // för felsökning i konsolen
