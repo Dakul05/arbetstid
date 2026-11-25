@@ -21,7 +21,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.1.0";
+  const VERSION = "0.2.0";
   const STORAGE_KEY = "arbetstid.v1";
   const EVENT_TYPES = ["start", "stop", "adjust", "import", "leave_add", "leave_del"];
 
@@ -71,6 +71,19 @@
     const leaves = new Map();
     let since = null;
     let lastToggle = null;
+    // Importerad tid: den senaste importen per dag (högst rev) sätter dagens grundvärde.
+    // Då går en omimport att ersätta utan att något måste raderas, vilket gör den synkbar.
+    const imports = {};
+    for (const e of evs) {
+      if (e.type !== "import") continue;
+      const d = e.data || {};
+      const m = Number(d.min);
+      if (!isDayKey(d.day) || !isFinite(m) || m < 0) continue;
+      const rev = d.rev === undefined ? e.t : Number(d.rev);
+      const cur = imports[d.day];
+      if (!cur || rev > cur.rev || (rev === cur.rev && e.id > cur.id)) imports[d.day] = { rev, id: e.id, min: m };
+    }
+    for (const [day, v] of Object.entries(imports)) days[day] = round1(v.min);
     for (const e of evs) {
       const d = e.data || {};
       switch (e.type) {
@@ -87,12 +100,6 @@
           let pagar = 0;
           if (since !== null && bak === 0) pagar = (e.t - Math.max(since, midnightOf(new Date(e.t)).getTime())) / 60000;
           days[d.day] = round1(Math.max((days[d.day] || 0) + m, -pagar));
-          break;
-        }
-        case "import": {
-          const m = Number(d.min);
-          if (!isDayKey(d.day) || !isFinite(m) || m < 0) break;
-          days[d.day] = round1((days[d.day] || 0) + m);
           break;
         }
         case "leave_add":
@@ -324,34 +331,42 @@
     // Slår ihop med befintlig logg (union på id). Inställningar skrivs bara över om withSettings.
     importData(obj, withSettings) {
       if (!obj || obj.app !== "arbetstid" || !Array.isArray(obj.events)) throw new Error("Filen ser inte ut som en arbetstidsbackup");
+      if (withSettings && obj.settings) this.store.settings = { ...DEFAULT_SETTINGS, ...obj.settings };
+      return this.mergeEvents(obj.events, true);
+    }
+
+    // Slår ihop händelser utifrån (backup, synk) med den lokala loggen. Union på id.
+    mergeEvents(list, force) {
       const have = new Set(this.store.events.map((e) => e.id));
       let added = 0, skipped = 0, invalid = 0;
-      for (const e of obj.events) {
+      for (const e of list || []) {
         if (!validEvent(e)) { invalid++; continue; }
         if (have.has(e.id)) { skipped++; continue; }
         this.store.events.push({ id: e.id, t: e.t, type: e.type, data: e.data || {} });
         have.add(e.id);
         added++;
       }
-      if (withSettings && obj.settings) this.store.settings = { ...DEFAULT_SETTINGS, ...obj.settings };
-      this.store.save();
-      this._changed();
+      if (added || force) {
+        this.store.save();
+        this._changed();
+      }
       return { added, skipped, invalid };
     }
 
     // Läser en dag→minuter-karta, t.ex. attributet "days" från sensor.arbetstid i HA.
     // Tar emot antingen kartan själv eller ett objekt med nyckeln days.
-    // En dag som redan importerats ersätts med det nya värdet.
+    // En dag som redan importerats ersätts med det nya värdet (senaste importen gäller).
     importDays(obj) {
       const map = obj && typeof obj === "object" && obj.days && typeof obj.days === "object" ? obj.days : obj;
       if (!map || typeof map !== "object") throw new Error("Hittar ingen dagslista");
       let n = 0, bad = 0;
+      // alltid högre än tidigare importers, även om klockan står still eller hoppar
+      const maxRev = this.store.events.reduce((m, e) => (e.type === "import" ? Math.max(m, Number(e.data && e.data.rev !== undefined ? e.data.rev : e.t) || 0) : m), 0);
+      const rev = Math.max(this.now(), maxRev + 1);
       for (const [day, min] of Object.entries(map)) {
         const v = Number(min);
         if (!isDayKey(day) || !isFinite(v) || v < 0) { bad++; continue; }
-        const id = "import-" + day;
-        this.store.events = this.store.events.filter((e) => e.id !== id);
-        if (v > 0) this.store.events.push({ id, t: parseDay(day).getTime() + 12 * 3600000, type: "import", data: { day, min: v } });
+        this.store.events.push({ id: uid(), t: parseDay(day).getTime() + 12 * 3600000, type: "import", data: { day, min: v, rev } });
         n++;
       }
       this.store.save();

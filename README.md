@@ -16,6 +16,7 @@ bakom det sitter en lokal motor (`engine.js`) i stället för HA.
 - Påminnelse efter valfritt antal timmar (visas när appen är öppen)
 - Fungerar utan nät när den väl är installerad
 - Backup till fil, och inläsning av backup. Tid från Home Assistant kan flyttas in.
+- Valfri synk mellan enheter via ditt eget Google-ark, med mejlade rapporter (se `google-synk/README.md`)
 
 ## Lägga ut den (ett tillfälle)
 
@@ -45,8 +46,8 @@ Allt sparas i webbläsarens lokala lagring på enheten. Det betyder:
 
 - Byter du telefon eller rensar webbplatsdata försvinner loggen. **Ta en backup**
   (Inställningar → Spara backup) då och då. Appen påminner efter 30 dagar utan backup.
-- Två enheter delar inte logg. Backupfilen kan läsas in på en annan enhet, och
-  loggarna slås då ihop utan dubbletter.
+- Utan synk delar två enheter inte logg. Backupfilen kan läsas in på en annan enhet, och
+  loggarna slås då ihop utan dubbletter. Med synk (se nedan) sker det automatiskt.
 - Appen ber webbläsaren skydda lagringen mot automatisk rensning, men det
   garanteras inte. På iPhone är webbläsarens lagring mer sårbar, och särskilt om
   appen inte installerats på hemskärmen.
@@ -63,7 +64,7 @@ Inställningar → *Flytta in tid från Home Assistant*. Dagar som redan finns e
 - Påminnelser i bakgrunden är opålitliga i en webbapp (särskilt på iPhone).
   Påminnelsen visas när appen är öppen eller kommer tillbaka i förgrunden.
 - Ingen morgonpåminnelse om att tiden inte är startad.
-- Rapporten skickas som delad text och en HTML-fil via delningsmenyn. Själva
+- Rapporten skickas som delad text och en HTML-fil via delningsmenyn (eller som mejl via synkskriptet). Själva
   mailet skickas av användarens egen mailapp, inte av appen.
 
 ## Filer
@@ -72,9 +73,11 @@ Inställningar → *Flytta in tid från Home Assistant*. Dagar som redan finns e
 |---|---|
 | `index.html`, `app.js` | Appskalet: inställningar, backup, påminnelse, delning |
 | `engine.js` | Lokal motor: händelselogg, samma regler som HA-paketet |
+| `sync.js` | Synkklient (valfri) |
+| `google-synk/` | Skriptet för Google-arket och installationsguide |
 | `arbetstid-card.js` | Kortet (samma fil som i HA-versionen) |
 | `sw.js`, `manifest.webmanifest`, `*.png` | Offline, installation och ikoner |
-| `test/engine.test.js` | Enhetstester av motorn |
+| `test/` | Enhetstester (motor, synk mot låtsas-Google) och webbläsartester (synk, vecko-/månads-/årsskifte) |
 
 ## Uppdatera
 
@@ -88,7 +91,10 @@ hit för hand (och raden med `generated_by` läggas tillbaka).
 ## Tester
 
 ```
-TZ=Europe/Stockholm node --test test/engine.test.js
+TZ=Europe/Stockholm node --test test/engine.test.js test/sync.test.js
+npx http-server -p 8123 &        # webbläsartesterna behöver Playwright + Chrome
+node test/e2e-sync.js
+node test/e2e-rollover.js
 ```
 
 Testen av sommartidsbyte är specifik för svensk tid, därför `TZ`.
@@ -97,5 +103,4 @@ Testen av sommartidsbyte är specifik för svensk tid, därför `TZ`.
 
 Varje start, stopp, justering och ledighet sparas som en händelse med eget id.
 Dagssummorna räknas fram ur händelserna varje gång. Därför kan två loggar slås
-ihop utan konflikter, och det är grunden om man senare vill lägga till synk
-(t.ex. via ett eget Google-ark).
+ihop utan konflikter, och det är det som synken bygger på.

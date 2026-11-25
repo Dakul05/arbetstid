@@ -60,6 +60,15 @@
   // ---- delning av rapport (ersätter mailtjänsten i HA)
   async function shareReport(subject, html) {
     const text = htmlToText(html);
+    if (sync && sync.mailViaScript) {
+      try {
+        const to = await sync.mail(subject, html, text);
+        toast(to ? `Rapporten mejlades till ${to}` : "Rapporten mejlades", 4000);
+        return;
+      } catch (err) {
+        toast("Mejlet gick inte: " + (err && err.message ? err.message : "okänt fel") + ". Delar på vanligt sätt.", 5000);
+      }
+    }
     const file = new File([html], slug(subject) + ".html", { type: "text/html" });
     if (navigator.share) {
       try {
@@ -77,7 +86,9 @@
   }
 
   // ---- motor + kort
+  let sync = null; // sätts direkt nedan; shareReport körs först när någon trycker
   const eng = new E.LocalHass({ storage: window.localStorage, shareReport });
+  sync = new ArbetstidSync.Sync({ eng, storage: window.localStorage });
   if (eng.store.loadError) toast("Kunde inte läsa sparad data. En kopia har sparats undan.", 6000);
 
   const card = document.createElement("arbetstid-card");
@@ -103,6 +114,25 @@
   card.hass = eng.hass;
   eng.subscribe((h) => { card.hass = h; });
   const refreshLeave = () => { if (card._fetchLeave) card._fetchLeave(); };
+
+  // ---- synk (valfri)
+  let syncTimer = null;
+  function syncSoon(ms) {
+    if (!sync.configured) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(runSync, ms === undefined ? 4000 : ms);
+  }
+  async function runSync() {
+    if (!sync.configured || sync.busy || !navigator.onLine) return;
+    const before = eng.store.events.length;
+    await sync.run();
+    if (eng.store.events.length !== before) refreshLeave();
+  }
+  eng.subscribe(() => { if (!sync.merging) syncSoon(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) syncSoon(500); });
+  window.addEventListener("online", () => syncSoon(500));
+  setInterval(() => { if (!document.hidden) syncSoon(0); }, 5 * 60 * 1000);
+  setTimeout(() => syncSoon(0), 1200);
 
   // ---- påminnelse
   function banner(text, buttons) {
@@ -189,6 +219,7 @@
     $("install-row").classList.toggle("hide", !installEvent);
     const persisted = $("about").dataset.persisted;
     $("about").textContent = `Arbetstid ${E.VERSION} · lagring ${persisted === "yes" ? "skyddad av webbläsaren" : "ej särskilt skyddad (ta backup)"} · ${eng.store.events.length} händelser`;
+    fillSync();
     if (!dlg.open) dlg.showModal();
   }
 
@@ -208,6 +239,39 @@
     card.setConfig(cardConfig());
     dlg.close();
     toast("Sparat");
+  });
+
+  function syncStatusText() {
+    const st = sync.status;
+    if (!st.configured) return "Inte ansluten. Allt ligger bara på den här enheten.";
+    if (st.busy) return "Synkar…";
+    const when = st.last ? `Senast synkad ${new Date(st.last).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" })}.` : "Ännu inte synkad.";
+    return st.error ? `${when} Fel: ${st.error}` : `Ansluten. ${when}`;
+  }
+  function fillSync() {
+    const st = sync.status;
+    $("sy-url").value = st.url || "";
+    $("sy-key").value = st.key || "";
+    $("sy-mail").checked = !!st.mail;
+    $("sy-status").textContent = syncStatusText();
+    $("sy-off").classList.toggle("hide", !st.configured);
+    $("sy-reset").classList.toggle("hide", !st.configured);
+  }
+  sync.onChange(() => { if (dlg.open) fillSync(); });
+  $("sy-go").addEventListener("click", async () => {
+    try { sync.configure($("sy-url").value, $("sy-key").value, $("sy-mail").checked); }
+    catch (err) { toast(err.message, 5000); return; }
+    fillSync();
+    await runSync();
+    fillSync();
+    toast(sync.status.error ? "Synk: " + sync.status.error : "Synkad", 4000);
+  });
+  $("sy-reset").addEventListener("click", async () => { sync.refetchAll(); await runSync(); fillSync(); });
+  $("sy-off").addEventListener("click", () => {
+    if (!confirm("Koppla från synken på den här enheten? Datan finns kvar här och i arket.")) return;
+    sync.disconnect();
+    fillSync();
+    toast("Frånkopplad");
   });
 
   $("s-notif").addEventListener("click", async () => {
@@ -262,7 +326,7 @@
   });
 
   $("s-clear").addEventListener("click", () => {
-    if (!confirm("Radera ALL tid och alla inställningar på den här enheten? Det går inte att ångra. Ta en backup först om du är osäker.")) return;
+    if (!confirm("Radera ALL tid och alla inställningar på den här enheten? Det går inte att ångra. Ta en backup först om du är osäker." + (sync.configured ? "\n\nSynken är på: allt som finns i arket hämtas tillbaka vid nästa synk. Koppla från synken först om du vill börja om på riktigt." : ""))) return;
     eng.clearAll();
     localStorage.removeItem(LS_REMINDED);
     card.setConfig(cardConfig());

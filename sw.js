@@ -1,7 +1,7 @@
 // Service worker: gör att appen startar utan nät.
 // Höj CACHE-versionen när filerna ändras, så hämtar telefonen nya.
-const CACHE = "arbetstid-v0.1.1";
-const ASSETS = ["./", "index.html", "app.js", "engine.js", "arbetstid-card.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+const CACHE = "arbetstid-v0.2.0";
+const ASSETS = ["./", "index.html", "app.js", "engine.js", "sync.js", "arbetstid-card.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

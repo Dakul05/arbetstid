@@ -126,6 +126,22 @@
       <label class="chk hide" id="s-withsettings-wrap"><input type="checkbox" id="s-withsettings"> Läs även in inställningarna ur filen</label>
       <input type="file" id="s-file" accept="application/json,.json" class="hide">
 
+      <h3>Synk (valfritt)</h3>
+      <p class="small">Håll flera enheter lika och få en extra backup i ditt eget Google Kalkylark. Se <b>google-synk/README.md</b> för hur du sätter upp det. Nyckeln stannar på den här enheten och ingår inte i backupfilen.</p>
+      <label>Webbadress (Apps Script)
+        <input type="url" id="sy-url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off">
+      </label>
+      <label>Nyckel
+        <input type="password" id="sy-key" autocomplete="off" autocapitalize="off" autocorrect="off">
+      </label>
+      <label class="chk"><input type="checkbox" id="sy-mail"> Skicka rapporter som mejl via skriptet (till ditt eget Google-konto)</label>
+      <p class="small" id="sy-status"></p>
+      <div class="row">
+        <button type="button" class="b" id="sy-go">Spara och synka</button>
+        <button type="button" class="b" id="sy-reset">Hämta om allt</button>
+        <button type="button" class="b" id="sy-off">Koppla från</button>
+      </div>
+
       <h3>Flytta in tid från Home Assistant</h3>
       <p class="small">Klistra in dagslistan (attributet <b>days</b> på sensor.arbetstid). Dagar som redan finns ersätts.</p>
       <textarea id="s-ha" placeholder='"2026-10-12": 452.5&#10;"2026-10-13": 480'></textarea>
@@ -146,6 +162,7 @@
 
   <script src="arbetstid-card.js"></script>
   <script src="engine.js"></script>
+  <script src="sync.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
