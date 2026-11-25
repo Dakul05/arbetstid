@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arbetstid</title>
+<meta name="theme-color" content="#0d1117">
+<meta name="color-scheme" content="dark light">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Arbetstid">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root {
+    --page-bg: #0d1117;
+    --card-background-color: #1c1f24;
+    --primary-text-color: #e8ecf1;
+    --secondary-text-color: rgba(232, 236, 241, 0.6);
+    --divider-color: rgba(127, 127, 127, 0.25);
+    --field-bg: rgba(127, 127, 127, 0.14);
+    --ok: #3ecf8e;
+    --warn: #ff8a4c;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --page-bg: #eef1f5;
+      --card-background-color: #ffffff;
+      --primary-text-color: #1b1f24;
+      --secondary-text-color: rgba(27, 31, 36, 0.62);
+      --divider-color: rgba(27, 31, 36, 0.16);
+      --field-bg: rgba(27, 31, 36, 0.07);
+      color-scheme: light;
+    }
+  }
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--page-bg); color: var(--primary-text-color); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #app { min-height: 100dvh; box-sizing: border-box; display: flex; padding: calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left)); }
+  arbetstid-card { flex: 1; display: block; min-width: 0; max-width: 760px; margin: 0 auto; }
+
+  #gear { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 15px); right: calc(env(safe-area-inset-right) + 20px); width: 36px; height: 36px; border-radius: 50%; border: 0; padding: 0; background: var(--field-bg); color: var(--secondary-text-color); display: grid; place-items: center; cursor: pointer; }
+  @media (min-width: 776px) { #gear { right: calc(50vw - 380px + 20px); } }
+  #gear svg { width: 20px; height: 20px; }
+
+  #banner { position: fixed; z-index: 30; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 10px); max-width: 520px; margin: 0 auto; background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 14px; padding: 12px 14px; box-shadow: 0 8px 30px rgba(0,0,0,.35); display: none; }
+  #banner.on { display: block; }
+  #banner p { margin: 0 0 10px; font-size: 15px; }
+  #banner .row { display: flex; gap: 8px; justify-content: flex-end; }
+  #toast { position: fixed; z-index: 40; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 22px); transform: translateX(-50%); max-width: calc(100vw - 32px); background: #2b3038; color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; text-align: center; }
+  #toast.on { opacity: 1; }
+
+  button.b { font: inherit; font-size: 15px; font-weight: 600; border: 0; border-radius: 10px; padding: 10px 14px; background: var(--field-bg); color: var(--primary-text-color); cursor: pointer; }
+  button.b.primary { background: var(--ok); color: #0d1117; }
+  button.b.danger { color: var(--warn); }
+  button.b:disabled { opacity: .5; }
+
+  dialog { width: min(480px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); box-sizing: border-box; padding: 0; border: 1px solid var(--divider-color); border-radius: 16px; background: var(--card-background-color); color: var(--primary-text-color); }
+  dialog::backdrop { background: rgba(0, 0, 0, .6); }
+  .dlg { padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 14px; font-size: 15px; }
+  .dlg h2 { margin: 0; font-size: 19px; }
+  .dlg h3 { margin: 6px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--secondary-text-color); font-weight: 600; }
+  .dlg p { margin: 0; color: var(--secondary-text-color); font-size: 14px; line-height: 1.4; }
+  .dlg label { display: flex; flex-direction: column; gap: 5px; font-size: 14px; color: var(--secondary-text-color); }
+  .dlg input[type=text], .dlg input[type=number], .dlg textarea { font: inherit; font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid var(--divider-color); background: var(--field-bg); color: var(--primary-text-color); width: 100%; box-sizing: border-box; }
+  .dlg textarea { min-height: 80px; resize: vertical; font-size: 13px; }
+  .dlg .chk { flex-direction: row; align-items: center; gap: 10px; color: var(--primary-text-color); }
+  .dlg .chk input { width: 20px; height: 20px; margin: 0; }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; }
+  .days label { flex-direction: row; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; background: var(--field-bg); color: var(--primary-text-color); }
+  .days input { margin: 0; width: 18px; height: 18px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 auto; }
+  .hide { display: none !important; }
+  .adv { display: flex; flex-direction: column; gap: 14px; }
+  .foot { display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--divider-color); position: sticky; bottom: -16px; margin: 0 -18px -16px; padding: 12px 18px 16px; background: var(--card-background-color); }
+  .small { font-size: 12px !important; }
+</style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <button id="gear" aria-label="Inställningar" title="Inställningar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+  </button>
+
+  <div id="banner" role="alert"><p id="banner-text"></p><div class="row" id="banner-actions"></div></div>
+  <div id="toast" role="status"></div>
+
+  <dialog id="settings">
+    <form method="dialog" class="dlg" id="settings-form" autocomplete="off">
+      <h2 id="settings-title">Inställningar</h2>
+      <p id="welcome" class="hide">Appen sparar allt på den här enheten, ingen inloggning och inget konto. Ställ in din arbetstid nedan, så jämförs det du jobbar mot rätt norm.</p>
+
+      <h3>Arbetstid</h3>
+      <label>Veckoarbetstid (tt:mm)
+        <input type="text" id="s-norm" inputmode="decimal" placeholder="40:00">
+      </label>
+      <div>
+        <div class="small" style="color:var(--secondary-text-color);margin-bottom:6px">Arbetsdagar</div>
+        <div class="days" id="s-days"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="s-holidays"> Svenska röda dagar räknas som lediga</label>
+      <label class="chk"><input type="checkbox" id="s-eves"> Midsommar-, jul- och nyårsafton är lediga</label>
+      <label>Dygn bakåt som går att justera
+        <input type="number" id="s-edit" min="0" max="14" inputmode="numeric">
+      </label>
+
+      <h3>Påminnelse</h3>
+      <label>Påminn efter så många timmar (0 = av)
+        <input type="number" id="s-rem" min="0" max="16" step="0.5" inputmode="decimal">
+      </label>
+      <p class="small">Påminnelsen visas när appen är öppen. Tillåt notiser om du vill ha den även när appen ligger i bakgrunden, men webbappar kan inte garantera det.</p>
+      <div class="row"><button type="button" class="b" id="s-notif">Tillåt notiser</button></div>
+
+      <div class="adv" id="s-adv">
+      <h3>Backup</h3>
+      <p id="backup-info">Allt ligger bara på den här enheten. Ta en backup då och då.</p>
+      <div class="row">
+        <button type="button" class="b" id="s-export">Spara backup</button>
+        <button type="button" class="b" id="s-share">Dela backup…</button>
+        <button type="button" class="b" id="s-import">Läs in backup…</button>
+      </div>
+      <label class="chk hide" id="s-withsettings-wrap"><input type="checkbox" id="s-withsettings"> Läs även in inställningarna ur filen</label>
+      <input type="file" id="s-file" accept="application/json,.json" class="hide">
+
+      <h3>Flytta in tid från Home Assistant</h3>
+      <p class="small">Klistra in dagslistan (attributet <b>days</b> på sensor.arbetstid). Dagar som redan finns ersätts.</p>
+      <textarea id="s-ha" placeholder='"2026-10-12": 452.5&#10;"2026-10-13": 480'></textarea>
+      <div class="row"><button type="button" class="b" id="s-ha-go">Importera dagar</button></div>
+
+      <h3>Installera</h3>
+      <p class="small" id="install-info">Android (Chrome): menyn ⋮ → Installera app. iPhone (Safari): Dela → Lägg till på hemskärmen.</p>
+      <div class="row hide" id="install-row"><button type="button" class="b" id="s-install">Installera appen</button></div>
+
+      <h3>Om</h3>
+      <p class="small" id="about"></p>
+      <div class="row"><button type="button" class="b danger" id="s-clear">Radera all data</button></div>
+      </div>
+
+      <div class="foot"><button type="button" class="b" id="s-cancel">Stäng</button><button type="submit" class="b primary" id="s-save" value="save">Spara</button></div>
+    </form>
+  </dialog>
+
+  <script src="arbetstid-card.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
