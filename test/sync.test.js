@@ -132,7 +132,7 @@ test("Koppla telefon: länken innehåller adress och nyckel och fungerar i appen
   server.api.kopplaTelefon();
   const html = server.ui.dialogs[0].html;
   const link = html.match(/readonly[^>]*>([^<]+)</)[1];
-  assert.ok(link.startsWith("https://dakul05.github.io/arbetstid/#synk="));
+  assert.ok(link.startsWith("https://exempel.github.io/arbetstid/#synk="));
   const o = S.parseLink(link.split("#")[1]);
   assert.equal(o.url, "https://script.google.com/macros/s/AKtest/exec", "/dev blir /exec");
   assert.equal(o.key, server.key);
@@ -149,8 +149,15 @@ test("Koppla telefon utan distribution ger tydligt besked, ingen länk", () => {
   assert.match(server.ui.alerts[0][1], /Distribuera/);
 });
 
+test("Koppla telefon utan inställd APP_URL förklarar vad som saknas", () => {
+  const server = createScript({ appUrl: false });
+  server.api.kopplaTelefon();
+  assert.equal(server.ui.dialogs.length, 0);
+  assert.match(server.ui.alerts[0][1], /APP_URL/);
+});
+
 test("Mejla länken går alltid till ägaren, även med MOTTAGARE satt", () => {
-  const server = createScript({ owner: "agare@example.com", mottagare: "ann@example.com" });
+  const server = createScript({ owner: "agare@example.com", mottagare: "mottagare@example.com" });
   server.api.mejlaLank();
   assert.equal(server.mails[0].to, "agare@example.com");
   assert.match(server.mails[0].body, /#synk=/);
@@ -301,9 +308,9 @@ test("mail via skriptet går bara till ägaren, aldrig till en adress i anropet"
   assert.deepEqual(server.post({ key: "fel", action: "mail", subject: "x" }), { ok: false, error: "auth" });
   assert.equal(server.mails.length, 2);
   // MOTTAGARE i skriptet styr
-  const s2 = createScript({ mottagare: "ann@example.com" });
+  const s2 = createScript({ mottagare: "mottagare@example.com" });
   s2.post({ key: s2.key, action: "mail", subject: "x", html: "y" });
-  assert.equal(s2.mails[0].to, "ann@example.com");
+  assert.equal(s2.mails[0].to, "mottagare@example.com");
 });
 
 test("synkinställningar ingår inte i en backup", async () => {

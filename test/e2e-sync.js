@@ -6,7 +6,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || "/opt/node22/lib/node_mod
 const { createScript } = require("./gas-mock.js");
 
 const APP = process.env.APP_URL || "http://localhost:8123/index.html";
-const script = createScript({ key: "hemlig123", owner: "ann@example.com" });
+const script = createScript({ key: "hemlig123", owner: "agare@example.com" });
 const server = http.createServer((req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method !== "POST") { res.end(JSON.stringify(script.get())); return; }

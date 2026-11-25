@@ -21,7 +21,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const VERSION = "0.2.1";
+  const VERSION = "0.2.2";
   const STORAGE_KEY = "arbetstid.v1";
   const EVENT_TYPES = ["start", "stop", "adjust", "import", "leave_add", "leave_del"];
 
@@ -121,6 +121,7 @@
       this.events = [];
       this.settings = { ...DEFAULT_SETTINGS };
       this.loadError = null;
+      this.saveError = null;
       this.load();
     }
 
@@ -139,8 +140,16 @@
       }
     }
 
+    // Returnerar false om webbläsaren vägrar spara (fullt lagringsutrymme, privat läge m.m.)
     save() {
-      this.storage.setItem(STORAGE_KEY, JSON.stringify({ v: 1, events: this.events, settings: this.settings }));
+      try {
+        this.storage.setItem(STORAGE_KEY, JSON.stringify({ v: 1, events: this.events, settings: this.settings }));
+        this.saveError = null;
+        return true;
+      } catch (err) {
+        this.saveError = err;
+        return false;
+      }
     }
 
     add(type, data, t) {
@@ -167,6 +176,23 @@
       this.settings = { ...DEFAULT_SETTINGS };
       this.save();
     }
+  }
+
+  // Tar bara med kända inställningar med rimliga värden (en felaktig fil ska inte kunna välta kortet)
+  function cleanSettings(o) {
+    const s = { ...DEFAULT_SETTINGS };
+    if (!o || typeof o !== "object") return s;
+    if (typeof o.norm_week === "string" && /^\d{1,3}:\d{2}$/.test(o.norm_week)) s.norm_week = o.norm_week;
+    if (Array.isArray(o.work_days)) {
+      const wd = [...new Set(o.work_days.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))];
+      if (wd.length) s.work_days = wd;
+    }
+    if (typeof o.holidays === "boolean") s.holidays = o.holidays;
+    if (typeof o.eves === "boolean") s.eves = o.eves;
+    if (Number.isFinite(Number(o.edit_days))) s.edit_days = Math.min(14, Math.max(0, Math.round(Number(o.edit_days))));
+    if (Number.isFinite(Number(o.reminder_hours))) s.reminder_hours = Math.min(16, Math.max(0, Number(o.reminder_hours)));
+    if (typeof o.configured === "boolean") s.configured = o.configured;
+    return s;
   }
 
   function validEvent(e) {
@@ -331,7 +357,7 @@
     // Slår ihop med befintlig logg (union på id). Inställningar skrivs bara över om withSettings.
     importData(obj, withSettings) {
       if (!obj || obj.app !== "arbetstid" || !Array.isArray(obj.events)) throw new Error("Filen ser inte ut som en arbetstidsbackup");
-      if (withSettings && obj.settings) this.store.settings = { ...DEFAULT_SETTINGS, ...obj.settings };
+      if (withSettings && obj.settings) this.store.settings = cleanSettings(obj.settings);
       return this.mergeEvents(obj.events, true);
     }
 

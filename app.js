@@ -123,12 +123,20 @@
     syncTimer = setTimeout(runSync, ms === undefined ? 4000 : ms);
   }
   async function runSync() {
-    if (!sync.configured || sync.busy || !navigator.onLine) return;
+    if (!sync.configured || !navigator.onLine) return;
+    if (sync.busy) { syncSoon(2000); return; } // ändringar under pågående synk får vänta på nästa varv
     const before = eng.store.events.length;
     await sync.run();
     if (eng.store.events.length !== before) refreshLeave();
+    const sent = new Set(sync.state.known);
+    if (!sync.status.error && eng.store.events.some((e) => !sent.has(e.id))) syncSoon(2000);
   }
   eng.subscribe(() => { if (!sync.merging) syncSoon(); });
+  let saveWarned = false;
+  eng.subscribe(() => {
+    if (eng.store.saveError && !saveWarned) { saveWarned = true; toast("Kunde inte spara på enheten. Lagringen kan vara full. Ta en backup nu.", 8000); }
+    if (!eng.store.saveError) saveWarned = false;
+  });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) syncSoon(500); });
   window.addEventListener("online", () => syncSoon(500));
   setInterval(() => { if (!document.hidden) syncSoon(0); }, 5 * 60 * 1000);
@@ -172,7 +180,7 @@
     const now = Date.now();
     const last = Number(localStorage.getItem(LS_BACKUP) || 0);
     const nag = Number(localStorage.getItem(LS_BACKUP_NAG) || 0);
-    if (eng.store.events.length > 20 && now - last > 30 * 864e5 && now - nag > 7 * 864e5 && !$("banner").classList.contains("on")) {
+    if (!sync.configured && eng.store.events.length > 20 && now - last > 30 * 864e5 && now - nag > 7 * 864e5 && !$("banner").classList.contains("on")) {
       localStorage.setItem(LS_BACKUP_NAG, String(now));
       banner("Dags för en backup? Allt ligger bara på den här enheten.", [["Senare", null], ["Öppna inställningar", () => openSettings(), "primary"]]);
     }
@@ -191,14 +199,14 @@
     if (/^\d{1,3}:\d{2}$/.test(t)) { const [h, m] = t.split(":").map(Number); min = h * 60 + m; }
     else if (/^\d{1,3}(\.\d+)?$/.test(t)) min = Math.round(parseFloat(t) * 60);
     else return null;
-    if (!(min > 0 && min <= 80 * 60)) return null;
+    if (!(min > 0 && min <= 80 * 60) || /:\d{2}$/.test(t) && Number(t.slice(-2)) > 59) return null;
     return `${Math.floor(min / 60)}:${String(min % 60).padStart(2, "0")}`;
   }
 
   function backupInfoText() {
     const last = Number(localStorage.getItem(LS_BACKUP) || 0);
     const when = last ? `Senaste backup: ${new Date(last).toLocaleDateString("sv-SE")}.` : "Ingen backup tagen ännu.";
-    return `Allt ligger bara på den här enheten. ${when}`;
+    return sync.configured ? `Allt synkas även till ditt Google-ark. ${when}` : `Allt ligger bara på den här enheten. ${when}`;
   }
 
   function openSettings() {

@@ -1,106 +1,56 @@
-# Arbetstid – fristående app (utan Home Assistant)
+# Arbetstid
 
-Stämpelklocka och arbetstidsrapport som körs direkt i telefonens webbläsare
-och sparar allt på enheten. Inget konto, ingen inloggning, ingen server som
-lagrar någons tid.
+En stämpelklocka och arbetstidsrapport som körs direkt i telefonens webbläsare.
+Ingen inloggning, inget konto och ingen server som lagrar din tid. Allt sparas
+på din egen telefon, och du kan om du vill även synka till ditt eget Google-ark.
 
-Samma kort som i Home Assistant-versionen (`arbetstid-card.js`, med en enda ändring: avsändaren i rapportens fot går att ställa in), men
-bakom det sitter en lokal motor (`engine.js`) i stället för HA.
+## Det här kan du göra
 
-## Vad den kan
+- Starta och stoppa arbetstiden med en knapp
+- Justera tiden med ±15, 30 eller 60 minuter, några dygn bakåt
+- Se dag, vecka och månad mot din veckoarbetstid. Svenska röda dagar räknas som lediga
+- Lägga in ledighet (halv dag, hel dag eller en period), som sänker normen
+- Skicka en rapport via telefonens delningsmeny (mejl, meddelanden m.m.)
+- Få en påminnelse efter ett antal timmar, så du inte glömmer att stämpla ut
+- Använda appen utan internet, när den väl är installerad
+- Ta backup till en fil, och läsa in den igen
+- Synka mellan flera enheter via ditt eget Google-ark (valfritt, se [google-synk/README.md](google-synk/README.md))
 
-- Starta och stoppa arbetstid, justera ±15/30/60 min upp till några dygn bakåt
-- Redovisning per dag, vecka och månad mot en veckonorm, med svenska röda dagar avräknade
-- "Ledig": ½ dag, 1 dag eller en period, som sänker normen
-- Rapport via telefonens delningsmeny (mail, meddelanden m.m.)
-- Påminnelse efter valfritt antal timmar (visas när appen är öppen)
-- Fungerar utan nät när den väl är installerad
-- Backup till fil, och inläsning av backup. Tid från Home Assistant kan flyttas in.
-- Valfri synk mellan enheter via ditt eget Google-ark (koppla med en länk, ingen kod att redigera), med mejlade rapporter (se `google-synk/README.md`)
+## Komma igång
 
-## Lägga ut den (ett tillfälle)
+1. Öppna appens adress i telefonens webbläsare.
+2. Installera den så den får en egen ikon och fungerar utan nät:
+   - **Android (Chrome):** meny ⋮ → *Installera app*
+   - **iPhone (Safari):** Dela → *Lägg till på hemskärmen*
+3. Första gången öppnas inställningarna. Skriv in din veckoarbetstid (till exempel `40:00` eller `37,5`) och välj arbetsdagar. Tryck *Spara*.
 
-Appen är bara statiska filer. Den behöver ligga på en **https**-adress för att
-kunna installeras och fungera offline. Den som lägger ut den ser aldrig någons
-tidsdata, eftersom den bara finns på respektive telefon.
+Sedan är det bara att trycka på knappen när du börjar och slutar.
 
-**GitHub Pages (gratis):**
-1. Skapa ett nytt repo på GitHub och ladda upp alla filer i den här mappen
-   (utom `test/`, som är valfri).
-2. Settings → Pages → Source: *Deploy from a branch* → `main` / `(root)` → Save.
-3. Efter någon minut finns appen på `https://<ditt-användarnamn>.github.io/<repo>/`.
+## Din data och backup
 
-Netlify Drop, Cloudflare Pages eller egen webbserver går lika bra. Allt som
-serverar filerna över https räcker.
+- Allt sparas i webbläsaren på din enhet. Den som tillhandahåller appen ser aldrig din tid.
+- Byter du telefon eller rensar du webbplatsdata utan backup försvinner tiden.
+  **Ta en backup** då och då: kugghjulet → *Spara backup*. Appen påminner om det efter 30 dagar.
+- Backupfilen kan läsas in på en annan enhet. Loggarna slås då ihop utan dubbletter.
+- Med synk till ditt Google-ark får du en backup automatiskt.
+- På iPhone är webbläsarens lagring känsligare för rensning, särskilt om appen inte lagts på hemskärmen.
 
-## Installera på telefonen
+## Påminnelser och begränsningar
 
-- **Android (Chrome):** öppna adressen, välj menyn ⋮ → *Installera app* (eller *Lägg till på startskärmen*).
-- **iPhone (Safari):** öppna adressen, tryck Dela → *Lägg till på hemskärmen*.
+- Påminnelsen visas när appen är öppen eller kommer tillbaka i förgrunden. Webbappar kan inte garantera notiser i bakgrunden, särskilt inte på iPhone.
+- Det finns ingen startskärmswidget med knapp, bara appikonen.
+- Rapporten skickas via telefonens delningsmeny, eller som mejl till dig själv om du kopplat synken.
 
-Första gången öppnas inställningarna. Ställ in veckoarbetstid och arbetsdagar.
+## Vanliga frågor
 
-## Backup och data
+**Min tid försvann.** Har du en backup eller synk kan du läsa in den. Annars finns den bara kvar om webbplatsdata inte rensats: öppna appen i samma webbläsare som du använde förut.
 
-Allt sparas i webbläsarens lokala lagring på enheten. Det betyder:
+**Jag ser inte den nya versionen.** Stäng appen helt och öppna den igen. Nya filer hämtas i bakgrunden och visas vid nästa start.
 
-- Byter du telefon eller rensar webbplatsdata försvinner loggen. **Ta en backup**
-  (Inställningar → Spara backup) då och då. Appen påminner efter 30 dagar utan backup.
-- Utan synk delar två enheter inte logg. Backupfilen kan läsas in på en annan enhet, och
-  loggarna slås då ihop utan dubbletter. Med synk (se nedan) sker det automatiskt.
-- Appen ber webbläsaren skydda lagringen mot automatisk rensning, men det
-  garanteras inte. På iPhone är webbläsarens lagring mer sårbar, och särskilt om
-  appen inte installerats på hemskärmen.
+**Fel dag eller tid?** Kontrollera att telefonens datum och tid är inställda automatiskt.
 
-### Flytta in tid från Home Assistant
+**Jag använde Home Assistant-versionen.** Kopiera värdet under `days` på `sensor.arbetstid` och klistra in det under kugghjulet → *Flytta in tid från Home Assistant*. Dagar som redan finns ersätts.
 
-I HA: Utvecklarverktyg → Tillstånd → `sensor.arbetstid` → kopiera värdet under
-`days` (raderna som ser ut som `"2026-10-12": 452.5`). Klistra in i
-Inställningar → *Flytta in tid från Home Assistant*. Dagar som redan finns ersätts.
+---
 
-## Begränsningar jämfört med Home Assistant
-
-- Ingen startskärmswidget med knapp, bara appikonen.
-- Påminnelser i bakgrunden är opålitliga i en webbapp (särskilt på iPhone).
-  Påminnelsen visas när appen är öppen eller kommer tillbaka i förgrunden.
-- Ingen morgonpåminnelse om att tiden inte är startad.
-- Rapporten skickas som delad text och en HTML-fil via delningsmenyn (eller som mejl via synkskriptet). Själva
-  mailet skickas av användarens egen mailapp, inte av appen.
-
-## Filer
-
-| Fil | Vad |
-|---|---|
-| `index.html`, `app.js` | Appskalet: inställningar, backup, påminnelse, delning |
-| `engine.js` | Lokal motor: händelselogg, samma regler som HA-paketet |
-| `sync.js` | Synkklient (valfri) |
-| `google-synk/` | Skriptet för Google-arket och installationsguide |
-| `arbetstid-card.js` | Kortet (samma fil som i HA-versionen) |
-| `sw.js`, `manifest.webmanifest`, `*.png` | Offline, installation och ikoner |
-| `test/` | Enhetstester (motor, synk mot låtsas-Google) och webbläsartester (synk, vecko-/månads-/årsskifte) |
-
-## Uppdatera
-
-Byt ut filerna på webbplatsen och höj versionsnumret på raden `const CACHE = ...`
-i `sw.js`, annars visar telefonen de gamla filerna från sin cache. Appen hämtar
-de nya filerna i bakgrunden och visar dem vid nästa start.
-
-Om du ändrar kortet i Home Assistant-versionen måste `arbetstid-card.js` kopieras
-hit för hand (och raden med `generated_by` läggas tillbaka).
-
-## Tester
-
-```
-TZ=Europe/Stockholm node --test test/engine.test.js test/sync.test.js
-npx http-server -p 8123 &        # webbläsartesterna behöver Playwright + Chrome
-node test/e2e-sync.js
-node test/e2e-rollover.js
-```
-
-Testen av sommartidsbyte är specifik för svensk tid, därför `TZ`.
-
-## Hur lagringen fungerar
-
-Varje start, stopp, justering och ledighet sparas som en händelse med eget id.
-Dagssummorna räknas fram ur händelserna varje gång. Därför kan två loggar slås
-ihop utan konflikter, och det är det som synken bygger på.
+Information för den som vill lägga ut eller ändra appen finns i [UTVECKLING.md](UTVECKLING.md).

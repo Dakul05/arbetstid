@@ -3,12 +3,12 @@
 Med synk delar dina enheter samma logg, och du får en extra backup i ett Google-ark
 som bara du äger. Utan synk fungerar appen precis som förut.
 
-Det här är ett litet skript som körs i **ditt** Google-konto. Ingen annan har
+Det är ett litet skript som körs i **ditt** Google-konto. Ingen annan har
 åtkomst till arket, och den som lagt ut appen ser aldrig din tid. Det kostar inget.
 
 ## Sätt upp (ca 5 minuter, görs en gång, helst på dator)
 
-1. Öppna mallen du fått länk till och tryck **Gör en kopia**. Kopian hamnar i ditt Google-konto och har skriptet inbyggt.
+1. Öppna mall-länken du fått från den som delat appen och tryck **Gör en kopia**. Kopian hamnar i ditt Google-konto och har skriptet inbyggt.
    (Har du ingen mall: skapa ett nytt ark på [sheets.new](https://sheets.new), välj **Tillägg → Apps Script**, klistra in innehållet i `Code.gs` och spara.)
 2. Meny **Tillägg → Apps Script**. Tryck **Distribuera → Ny distribution**, kugghjulet → **Webbapp**.
    - *Kör som:* **Jag**
@@ -47,10 +47,3 @@ används telefonens vanliga delningsmeny.
 Skriptets logik och appens synk är testade mot en låtsas-Google och två webbläsare.
 Själva Googles beteende (godkännandeskärmar, omdirigeringar, menyn och att adressen hämtas rätt) går inte att testa utan ett riktigt konto,
 så första uppsättningen bör du prova med två enheter.
-
-## För den som delar ut appen: skapa mallen (en gång)
-
-1. Skapa ett tomt Google-ark, **Tillägg → Apps Script**, klistra in `Code.gs` och spara. Kontrollera att `APP_URL` överst är appens adress.
-2. Dela arket: *Dela → Alla med länken → Läsare*. Ändra slutet på arkets webbadress från `/edit…` till `/copy`.
-   Den adressen är mallens länk: den som öppnar den får en egen kopia, med skriptet.
-3. Distribuera **inte** mallen själv, varje användare gör sin egen distribution i sin kopia.

@@ -218,3 +218,31 @@ test("tillståndsobjekten byts vid varje ändring (kortet jämför på identitet
   h.start();
   assert.notEqual(h.hass.states["sensor.arbetstid"], before);
 });
+
+test("backup med trasiga inställningar ger rimliga värden", () => {
+  const h = new E.LocalHass({ storage: memStorage(), now: () => Date.UTC(2026, 10, 25, 9) });
+  h.importData({ app: "arbetstid", events: [], settings: { norm_week: "abc", work_days: "mån", holidays: "ja", edit_days: 999, reminder_hours: -5, configured: true, skräp: 1 } }, true);
+  const s = h.store.settings;
+  assert.equal(s.norm_week, "40:00");
+  assert.deepEqual(s.work_days, [1, 2, 3, 4, 5]);
+  assert.equal(s.holidays, true);
+  assert.equal(s.edit_days, 14);
+  assert.equal(s.reminder_hours, 0);
+  assert.equal(s.configured, true);
+  assert.equal("skräp" in s, false);
+});
+
+test("lagring som vägrar spara ger saveError men appen fortsätter fungera i minnet", () => {
+  let full = false;
+  const st = { getItem: () => null, setItem: () => { if (full) throw new Error("QuotaExceededError"); } };
+  const h = new E.LocalHass({ storage: st, now: () => Date.UTC(2026, 10, 25, 9) });
+  h.start();
+  assert.equal(h.store.saveError, null);
+  full = true;
+  h.stop();
+  assert.ok(h.store.saveError);
+  assert.equal(h.running, false, "tillståndet följer ändå klicket");
+  full = false;
+  h.start();
+  assert.equal(h.store.saveError, null);
+});

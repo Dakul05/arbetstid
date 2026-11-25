@@ -73,6 +73,7 @@ function createScript(opts) {
 
   let code = fs.readFileSync(path.join(__dirname, "..", "google-synk", "Code.gs"), "utf8");
   if (opts.mottagare) code = code.replace("const MOTTAGARE = '';", `const MOTTAGARE = ${JSON.stringify(opts.mottagare)};`);
+  if (opts.appUrl !== false) code = code.replace("https://DITT-ANVANDARNAMN.github.io/arbetstid/", opts.appUrl || "https://exempel.github.io/arbetstid/");
   const api = new Function("SpreadsheetApp", "LockService", "Utilities", "ContentService", "MailApp", "Session", "PropertiesService", "ScriptApp", "HtmlService", code + "\nreturn { doPost, doGet, onOpen, kopplaTelefon, mejlaLank };")(
     g.SpreadsheetApp, g.LockService, g.Utilities, g.ContentService, g.MailApp, g.Session, g.PropertiesService, g.ScriptApp, g.HtmlService
   );

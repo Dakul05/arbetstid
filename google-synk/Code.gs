@@ -13,7 +13,7 @@
  * Händelserna sparas som rader i bladet "Händelser". RADERA INTE RADER där.
  */
 
-const APP_URL = 'https://dakul05.github.io/arbetstid/'; // appens adress
+const APP_URL = 'https://DITT-ANVANDARNAMN.github.io/arbetstid/'; // appens adress (ändras en gång i mallen)
 const MOTTAGARE = '';       // mail från appen går hit. Tomt = ditt eget Google-konto
 const BLAD = 'Händelser';
 const GILTIGA_TYPER = ['start', 'stop', 'adjust', 'import', 'leave_add', 'leave_del'];
@@ -150,6 +150,10 @@ function onOpen() {
 
 function kopplaTelefon() {
   const ui = SpreadsheetApp.getUi();
+  if (APP_URL.indexOf('DITT-') >= 0) {
+    ui.alert('Arbetstid', 'Appens adress är inte inställd i skriptet (raden APP_URL överst). Be den som delat arket om hjälp.', ui.ButtonSet.OK);
+    return;
+  }
   let lank;
   try {
     lank = lank_();
